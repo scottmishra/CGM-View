@@ -2,8 +2,10 @@ package com.mishra.charting;
 
 import com.mishra.cgdata.CGMData;
 import com.mishra.cgdata.CGMStats;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Worker;
 import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -25,12 +27,12 @@ import java.net.URL;
 import java.util.*;
 
 /**
- *
+ * Controller for loading and setting up the CGM chart
  * Created by Scott on 1/24/2016.
  */
 public class DataTableController implements Initializable {
 
-//    @FXML
+    //    @FXML
 //    TableView<CGMData> gcmDataTableView;
 //    @FXML
 //    TableColumn<CGMData, Integer> glucoseColumn;
@@ -49,10 +51,15 @@ public class DataTableController implements Initializable {
 
     private final NumberAxis yAxis = new NumberAxis();
     private final CategoryAxis xAxis = new CategoryAxis();
-    private final XYChart.Series<String,Number> series = new XYChart.Series<>();
-    private final XYChart.Series<String,Number> meanSeries = new XYChart.Series<>();
+    private final XYChart.Series<String, Number> series = new XYChart.Series<>();
+    private final XYChart.Series<String, Number> meanSeries = new XYChart.Series<>();
     private LineChart<String, Number> lineChart;
 
+    private final Label meanLabel = new Label();
+    private final Label stdLabel = new Label();
+    private final Label a1cLabel = new Label();
+    private final Label highLabel = new Label();
+    private final Label lowLabel = new Label();
 
     public void initialize(URL location, ResourceBundle resources) {
         tableList = FXCollections.observableArrayList();
@@ -65,21 +72,22 @@ public class DataTableController implements Initializable {
     void createChart(List<CGMData> dataList) {
 
         HBox statsBox = new HBox();
-        final Label meanLabel = new Label();
-        final Label stdLabel = new Label();
-        final Label a1cLabel = new Label();
-        final Label highLabel = new Label();
-        final Label lowLabel = new Label();
+
 
         statsBox.getChildren().addAll(meanLabel, stdLabel, a1cLabel, highLabel, lowLabel);
-        statsBox.setPadding(new Insets(10.0,10.0,10.0,10.0));
+        statsBox.setPadding(new Insets(10.0, 10.0, 10.0, 10.0));
         xAxis.setLabel("Date of update");
         yAxis.setLabel("Glucose Level");
         graphVBox.getChildren().addAll(lineChart, statsBox);
         VBox.setVgrow(lineChart, Priority.ALWAYS);
         statsBox.setAlignment(Pos.CENTER);
         StatisticsService service = new StatisticsService(dataList);
-        service.stateProperty().addListener((obs, oldState, newState) -> {
+        service.stateProperty().addListener(createServiceSucceededChangeListener(service));
+        service.start();
+    }
+
+    private ChangeListener<Worker.State> createServiceSucceededChangeListener(final StatisticsService service) {
+        return (observable, oldValue, newState) -> {
             switch (newState) {
                 case SUCCEEDED:
                     final TreeMap<String, CGMStats> stats = service.getValue();
@@ -89,10 +97,10 @@ public class DataTableController implements Initializable {
                     List<String> dateArray = new ArrayList<>();
                     dateArray.addAll(dates);
                     String firstDate = dateArray.get(0);
-                    String lastDate = dateArray.get(dateArray.size()-1);
+                    String lastDate = dateArray.get(dateArray.size() - 1);
                     for (String keys : dates) {
                         totalStats.addValue(stats.get(keys).getMean());
-                        XYChart.Data<String,Number> data = new XYChart.Data<>(keys,stats.get(keys).getMean());
+                        XYChart.Data<String, Number> data = new XYChart.Data<>(keys, stats.get(keys).getMean());
                         HoverNode node = new HoverNode(null, stats.get(keys));
                         EventHandler handler = event -> {
                             System.out.println("Creating a new graph for the hover node data");
@@ -100,22 +108,22 @@ public class DataTableController implements Initializable {
                             final NumberAxis yAxis = new NumberAxis();
                             xAxis.setLabel("Number of Updates");
                             //creating the chart
-                            final LineChart<Number,Number> lineChart =
+                            final LineChart<Number, Number> lineChart =
                                     new LineChart<>(xAxis, yAxis);
-                            XYChart.Series<Number,Number> daySeries = new XYChart.Series<>();
-                            XYChart.Series<Number,Number> dayMeanSeries = new XYChart.Series<>();
+                            XYChart.Series<Number, Number> daySeries = new XYChart.Series<>();
+                            XYChart.Series<Number, Number> dayMeanSeries = new XYChart.Series<>();
                             dayMeanSeries.setName("Day Mean");
                             daySeries.setName("Data for Day: " + keys);
                             int count = 0;
-                            for(double dataPoint : stats.get(keys).getStatData()) {
+                            for (double dataPoint : stats.get(keys).getStatData()) {
                                 daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
                                 count++;
                             }
                             dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(keys).getMean()));
-                            dayMeanSeries.getData().add(new XYChart.Data<>(count-1, stats.get(keys).getMean()));
-                            lineChart.getData().addAll(daySeries,dayMeanSeries);
+                            dayMeanSeries.getData().add(new XYChart.Data<>(count - 1, stats.get(keys).getMean()));
+                            lineChart.getData().addAll(daySeries, dayMeanSeries);
                             Stage dataStage = new Stage();
-                            Scene scene = new Scene(lineChart,800,800);
+                            Scene scene = new Scene(lineChart, 800, 800);
                             dataStage.setScene(scene);
                             dataStage.setTitle("Data: " + keys);
                             dataStage.show();
@@ -125,47 +133,45 @@ public class DataTableController implements Initializable {
                         series.getData().add(data);
                     }
                     series.setName("Daily Average Glucose Data");
-                    meanLabel.setText(String.format("Mean: %.3f " , totalStats.getMean()));
-                    stdLabel.setText(String.format("Std: %.3f " , totalStats.getStandardDeviation()));
-                    a1cLabel.setText(String.format("A1C: %.3f " , calcA1C(totalStats)));
+                    meanLabel.setText(String.format("Mean: %.3f ", totalStats.getMean()));
+                    stdLabel.setText(String.format("Std: %.3f ", totalStats.getStandardDeviation()));
+                    a1cLabel.setText(String.format("A1C: %.3f ", calcA1C(totalStats)));
                     highLabel.setText(String.format("High: %.3f ", calcHigh(stats)));
                     lowLabel.setText(String.format("Low: %.3f ", calcLow(stats)));
                     meanSeries.getData().add(new XYChart.Data<>(firstDate, totalStats.getMean()));
                     meanSeries.getData().add(new XYChart.Data<>(lastDate, totalStats.getMean()));
                     meanSeries.setName("Total Mean");
-                    lineChart.getData().addAll(series,meanSeries);
+                    lineChart.getData().addAll(series, meanSeries);
                     break;
             }
-        });
-        service.start();
-
+        };
     }
 
     private double calcLow(TreeMap<String, CGMStats> stats) {
         double total = stats.values().size();
         double count = 0;
-        for(CGMStats cgmStats : stats.values()){
-            if(cgmStats.getPercentHigh() > 0.01){
-                count +=cgmStats.getPercentLow();
+        for (CGMStats cgmStats : stats.values()) {
+            if (cgmStats.getPercentHigh() > 0.01) {
+                count += cgmStats.getPercentLow();
             }
         }
-        return count/total;
+        return count / total;
     }
 
     private double calcHigh(TreeMap<String, CGMStats> stats) {
         double total = stats.values().size();
         double count = 0;
-        for(CGMStats cgmStats : stats.values()){
-            if(cgmStats.getPercentLow() > 0.01){
-                count +=cgmStats.getPercentHigh();
+        for (CGMStats cgmStats : stats.values()) {
+            if (cgmStats.getPercentLow() > 0.01) {
+                count += cgmStats.getPercentHigh();
             }
         }
-        return count/total;
+        return count / total;
     }
 
     private double calcA1C(DescriptiveStatistics totalStats) {
         double a1c;
-        a1c = (totalStats.getMean() + 46.7)/28.7;
+        a1c = (totalStats.getMean() + 46.7) / 28.7;
         return a1c;
     }
 
