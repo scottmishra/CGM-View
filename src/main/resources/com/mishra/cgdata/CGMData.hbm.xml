@@ -1,0 +1,12 @@
+<hibernate-mapping>
+    <class name="com.mishra.cgdata.CGMData" table="cgdata">
+        <id name="updateNumber" type="java.lang.Integer">
+            <generator class="native"/>
+        </id>
+        <property name="glucose" type="int" column="glucose"/>
+        <property name="date" type="double" column="dateTime"/>
+        <property name="trend"  column="trend"/>
+        <property name="direction"  column="direction"/>
+        <property name="device"  column="device"/>
+    </class>
+</hibernate-mapping>
