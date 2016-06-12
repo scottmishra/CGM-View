@@ -38,7 +38,7 @@ public class HoverNode extends StackPane {
     }
 
     private Label createDataThresholdLabel(CGMStats value) {
-        final Label label = new Label(String.format("%.2f\n%.2f\n%.2f", value.getMean(), value.getPercentHigh(), value.getPercentLow()));
+        final Label label = new Label(String.format("\n%.2f\n%.2f\n%.2f", value.getMean(), value.getPercentHigh(), value.getPercentLow()));
         label.getStyleClass().addAll("default-color0", "chart-line-symbol", "chart-series-line");
         label.setStyle("-fx-font-size: 14; -fx-font-weight: bold;");
 

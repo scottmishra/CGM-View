@@ -8,21 +8,20 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
-import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.scene.layout.AnchorPane;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.net.URL;
-import java.time.Instant;
 import java.util.*;
 
 /**
@@ -31,20 +30,20 @@ import java.util.*;
  */
 public class DataTableController implements Initializable {
 
+//    @FXML
+//    TableView<CGMData> gcmDataTableView;
+//    @FXML
+//    TableColumn<CGMData, Integer> glucoseColumn;
+//    @FXML
+//    TableColumn<CGMData, Double> dateColumn;
+//    @FXML
+//    TableColumn<CGMData, String> deviceColumn;
+//    @FXML
+//    TableColumn<CGMData, String> directionColumn;
     @FXML
-    TableView<CGMData> gcmDataTableView;
-    @FXML
-    TableColumn<CGMData, Integer> glucoseColumn;
-    @FXML
-    TableColumn<CGMData, Double> dateColumn;
-    @FXML
-    TableColumn<CGMData, String> deviceColumn;
-    @FXML
-    TableColumn<CGMData, String> directionColumn;
-    @FXML
-    AnchorPane graphAnchorPane;
-    @FXML
-    SplitPane splitPane;
+    VBox graphVBox;
+//    @FXML
+//    SplitPane splitPane;
 
     private ObservableList<CGMData> tableList;
 
@@ -57,14 +56,14 @@ public class DataTableController implements Initializable {
 
     public void initialize(URL location, ResourceBundle resources) {
         tableList = FXCollections.observableArrayList();
-        gcmDataTableView.setItems(tableList);
-        setupColumns();
-        splitPane.setDividerPosition(0,0);
+//        gcmDataTableView.setItems(tableList);
+//        setupColumns();
+//        splitPane.setDividerPosition(0,0);
         lineChart = new LineChart<>(xAxis, yAxis);
     }
 
-    public void createChart(List<CGMData> dataList) {
-        VBox graphDataBox = new VBox();
+    void createChart(List<CGMData> dataList) {
+
         HBox statsBox = new HBox();
         final Label meanLabel = new Label();
         final Label stdLabel = new Label();
@@ -76,15 +75,9 @@ public class DataTableController implements Initializable {
         statsBox.setPadding(new Insets(10.0,10.0,10.0,10.0));
         xAxis.setLabel("Date of update");
         yAxis.setLabel("Glucose Level");
-
-
-        graphDataBox.getChildren().addAll(lineChart, statsBox);
-        graphAnchorPane.getChildren().add(graphDataBox);
-        AnchorPane.setBottomAnchor(graphDataBox, 0.0);
-        AnchorPane.setTopAnchor(graphDataBox, 0.0);
-        AnchorPane.setLeftAnchor(graphDataBox, 0.0);
-        AnchorPane.setRightAnchor(graphDataBox, 0.0);
-
+        graphVBox.getChildren().addAll(lineChart, statsBox);
+        VBox.setVgrow(lineChart, Priority.ALWAYS);
+        statsBox.setAlignment(Pos.CENTER);
         StatisticsService service = new StatisticsService(dataList);
         service.stateProperty().addListener((obs, oldState, newState) -> {
             switch (newState) {
@@ -176,76 +169,74 @@ public class DataTableController implements Initializable {
         return a1c;
     }
 
-    private void setupColumns() {
-        setUpGlucoseColumn();
-        setUpDateColumn();
-        setUpDeviceColumn();
-        setUpDirectionColumn();
-    }
+//    private void setupColumns() {
+//        setUpGlucoseColumn();
+//        setUpDateColumn();
+//        setUpDeviceColumn();
+//        setUpDirectionColumn();
+//    }
+//
+//    private void setUpDirectionColumn() {
+//        directionColumn.setCellValueFactory(new PropertyValueFactory<>("direction"));
+//        directionColumn.setCellFactory(column -> new TableCell<CGMData, String>() {
+//            @Override
+//            protected void updateItem(String item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (item == null) {
+//                    setText("");
+//                } else {
+//                    setText(item);
+//                }
+//            }
+//        });
+//    }
+//
+//    private void setUpDeviceColumn() {
+//        deviceColumn.setCellValueFactory(new PropertyValueFactory<>("device"));
+//        deviceColumn.setCellFactory(column -> new TableCell<CGMData, String>() {
+//            @Override
+//            protected void updateItem(String item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (item == null) {
+//                    setText("");
+//                } else {
+//                    setText(item);
+//                }
+//            }
+//        });
+//    }
+//
+//    private void setUpDateColumn() {
+//        dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
+//        dateColumn.setCellFactory(column -> new TableCell<CGMData, Double>() {
+//            @Override
+//            protected void updateItem(Double item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (item == null) {
+//                    setText("");
+//                } else {
+//                    setText(Instant.ofEpochMilli(item.longValue()).toString());
+//                }
+//            }
+//        });
+//    }
+//
+//    private void setUpGlucoseColumn() {
+//        glucoseColumn.setCellValueFactory(new PropertyValueFactory<>("glucose"));
+//        glucoseColumn.setCellFactory(column -> new TableCell<CGMData, Integer>() {
+//            @Override
+//            protected void updateItem(Integer item, boolean empty) {
+//                super.updateItem(item, empty);
+//                if (item == null) {
+//                    setText("");
+//                } else {
+//                    setText(item.toString());
+//                }
+//            }
+//        });
+//    }
 
-    private void setUpDirectionColumn() {
-        directionColumn.setCellValueFactory(new PropertyValueFactory<>("direction"));
-        directionColumn.setCellFactory(column -> new TableCell<CGMData, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (item == null) {
-                    setText("");
-                } else {
-                    setText(item);
-                }
-            }
-        });
-    }
-
-    private void setUpDeviceColumn() {
-        deviceColumn.setCellValueFactory(new PropertyValueFactory<>("device"));
-        deviceColumn.setCellFactory(column -> new TableCell<CGMData, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (item == null) {
-                    setText("");
-                } else {
-                    setText(item);
-                }
-            }
-        });
-    }
-
-    private void setUpDateColumn() {
-        dateColumn.setCellValueFactory(new PropertyValueFactory<>("date"));
-        dateColumn.setCellFactory(column -> new TableCell<CGMData, Double>() {
-            @Override
-            protected void updateItem(Double item, boolean empty) {
-                super.updateItem(item, empty);
-                if (item == null) {
-                    setText("");
-                } else {
-                    setText(Instant.ofEpochMilli(item.longValue()).toString());
-                }
-            }
-        });
-    }
-
-    private void setUpGlucoseColumn() {
-        glucoseColumn.setCellValueFactory(new PropertyValueFactory<>("glucose"));
-        glucoseColumn.setCellFactory(column -> new TableCell<CGMData, Integer>() {
-            @Override
-            protected void updateItem(Integer item, boolean empty) {
-                super.updateItem(item, empty);
-                if (item == null) {
-                    setText("");
-                } else {
-                    setText(item.toString());
-                }
-            }
-        });
-    }
-
-    public void addData(CGMData data) {
+    void addData(CGMData data) {
         tableList.add(data);
     }
-
-
 }
