@@ -37,22 +37,18 @@ public class CGMStats {
         return percentHigh;
     }
 
-    public void setPercentHigh(Double percentHigh) {
-        this.percentHigh = percentHigh;
-    }
-
     public Double getPercentLow() {
         return percentLow;
-    }
-
-    public void setPercentLow(Double percentLow) {
-        this.percentLow = percentLow;
     }
 
     public void addValue(double value){
         descriptiveStatistics.addValue(value);
         computePercentHigh();
         computePercentLow();
+    }
+
+    public double[] getStatData(){
+        return descriptiveStatistics.getValues();
     }
 
     /**

@@ -48,6 +48,9 @@ public class HoverNode extends StackPane {
         return label;
     }
 
+    /**
+     * Set the mouse click listener for the hover nodes
+     */
     public void setOnClick(EventHandler handler){
         setOnMouseClicked(handler);
     }

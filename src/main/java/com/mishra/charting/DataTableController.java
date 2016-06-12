@@ -8,6 +8,7 @@ import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Insets;
+import javafx.scene.Scene;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.NumberAxis;
@@ -17,13 +18,12 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 
 import java.net.URL;
 import java.time.Instant;
-import java.util.List;
-import java.util.ResourceBundle;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  *
@@ -51,7 +51,9 @@ public class DataTableController implements Initializable {
     private final NumberAxis yAxis = new NumberAxis();
     private final CategoryAxis xAxis = new CategoryAxis();
     private final XYChart.Series<String,Number> series = new XYChart.Series<>();
+    private final XYChart.Series<String,Number> meanSeries = new XYChart.Series<>();
     private LineChart<String, Number> lineChart;
+
 
     public void initialize(URL location, ResourceBundle resources) {
         tableList = FXCollections.observableArrayList();
@@ -59,7 +61,6 @@ public class DataTableController implements Initializable {
         setupColumns();
         splitPane.setDividerPosition(0,0);
         lineChart = new LineChart<>(xAxis, yAxis);
-        lineChart.getData().add(series);
     }
 
     public void createChart(List<CGMData> dataList) {
@@ -88,26 +89,58 @@ public class DataTableController implements Initializable {
         service.stateProperty().addListener((obs, oldState, newState) -> {
             switch (newState) {
                 case SUCCEEDED:
-                    TreeMap<String, CGMStats> stats = service.getValue();
+                    final TreeMap<String, CGMStats> stats = service.getValue();
                     System.out.println("Total days: " + stats.size());
                     DescriptiveStatistics totalStats = new DescriptiveStatistics();
-                    for (String keys : stats.keySet()) {
+                    Set<String> dates = stats.keySet();
+                    List<String> dateArray = new ArrayList<>();
+                    dateArray.addAll(dates);
+                    String firstDate = dateArray.get(0);
+                    String lastDate = dateArray.get(dateArray.size()-1);
+                    for (String keys : dates) {
                         totalStats.addValue(stats.get(keys).getMean());
                         XYChart.Data<String,Number> data = new XYChart.Data<>(keys,stats.get(keys).getMean());
                         HoverNode node = new HoverNode(null, stats.get(keys));
                         EventHandler handler = event -> {
-                            System.out.println("Clicked A Node");
+                            System.out.println("Creating a new graph for the hover node data");
+                            final NumberAxis xAxis = new NumberAxis();
+                            final NumberAxis yAxis = new NumberAxis();
+                            xAxis.setLabel("Number of Updates");
+                            //creating the chart
+                            final LineChart<Number,Number> lineChart =
+                                    new LineChart<>(xAxis, yAxis);
+                            XYChart.Series<Number,Number> daySeries = new XYChart.Series<>();
+                            XYChart.Series<Number,Number> dayMeanSeries = new XYChart.Series<>();
+                            dayMeanSeries.setName("Day Mean");
+                            daySeries.setName("Data for Day: " + keys);
+                            int count = 0;
+                            for(double dataPoint : stats.get(keys).getStatData()) {
+                                daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
+                                count++;
+                            }
+                            dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(keys).getMean()));
+                            dayMeanSeries.getData().add(new XYChart.Data<>(count-1, stats.get(keys).getMean()));
+                            lineChart.getData().addAll(daySeries,dayMeanSeries);
+                            Stage dataStage = new Stage();
+                            Scene scene = new Scene(lineChart,800,800);
+                            dataStage.setScene(scene);
+                            dataStage.setTitle("Data: " + keys);
+                            dataStage.show();
                         };
                         node.setOnClick(handler);
                         data.setNode(node);
                         series.getData().add(data);
                     }
+                    series.setName("Daily Average Glucose Data");
                     meanLabel.setText(String.format("Mean: %.3f " , totalStats.getMean()));
                     stdLabel.setText(String.format("Std: %.3f " , totalStats.getStandardDeviation()));
                     a1cLabel.setText(String.format("A1C: %.3f " , calcA1C(totalStats)));
                     highLabel.setText(String.format("High: %.3f ", calcHigh(stats)));
                     lowLabel.setText(String.format("Low: %.3f ", calcLow(stats)));
-
+                    meanSeries.getData().add(new XYChart.Data<>(firstDate, totalStats.getMean()));
+                    meanSeries.getData().add(new XYChart.Data<>(lastDate, totalStats.getMean()));
+                    meanSeries.setName("Total Mean");
+                    lineChart.getData().addAll(series,meanSeries);
                     break;
             }
         });
