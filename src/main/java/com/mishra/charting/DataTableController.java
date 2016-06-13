@@ -70,10 +70,7 @@ public class DataTableController implements Initializable {
     }
 
     void createChart(List<CGMData> dataList) {
-
         HBox statsBox = new HBox();
-
-
         statsBox.getChildren().addAll(meanLabel, stdLabel, a1cLabel, highLabel, lowLabel);
         statsBox.setPadding(new Insets(10.0, 10.0, 10.0, 10.0));
         xAxis.setLabel("Date of update");
