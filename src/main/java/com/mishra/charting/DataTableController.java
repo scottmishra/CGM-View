@@ -83,6 +83,12 @@ public class DataTableController implements Initializable {
         service.start();
     }
 
+    /**
+     * Create a change listener for dealing with the finish of the loading and interp. of all
+     * the cgm data
+     * @param service service to act on once finished
+     * @return change listener
+     */
     private ChangeListener<Worker.State> createServiceSucceededChangeListener(final StatisticsService service) {
         return (observable, oldValue, newState) -> {
             switch (newState) {
@@ -95,40 +101,7 @@ public class DataTableController implements Initializable {
                     dateArray.addAll(dates);
                     String firstDate = dateArray.get(0);
                     String lastDate = dateArray.get(dateArray.size() - 1);
-                    for (String keys : dates) {
-                        totalStats.addValue(stats.get(keys).getMean());
-                        XYChart.Data<String, Number> data = new XYChart.Data<>(keys, stats.get(keys).getMean());
-                        HoverNode node = new HoverNode(null, stats.get(keys));
-                        EventHandler handler = event -> {
-                            System.out.println("Creating a new graph for the hover node data");
-                            final NumberAxis xAxis = new NumberAxis();
-                            final NumberAxis yAxis = new NumberAxis();
-                            xAxis.setLabel("Number of Updates");
-                            //creating the chart
-                            final LineChart<Number, Number> lineChart =
-                                    new LineChart<>(xAxis, yAxis);
-                            XYChart.Series<Number, Number> daySeries = new XYChart.Series<>();
-                            XYChart.Series<Number, Number> dayMeanSeries = new XYChart.Series<>();
-                            dayMeanSeries.setName("Day Mean");
-                            daySeries.setName("Data for Day: " + keys);
-                            int count = 0;
-                            for (double dataPoint : stats.get(keys).getStatData()) {
-                                daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
-                                count++;
-                            }
-                            dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(keys).getMean()));
-                            dayMeanSeries.getData().add(new XYChart.Data<>(count - 1, stats.get(keys).getMean()));
-                            lineChart.getData().addAll(daySeries, dayMeanSeries);
-                            Stage dataStage = new Stage();
-                            Scene scene = new Scene(lineChart, 800, 800);
-                            dataStage.setScene(scene);
-                            dataStage.setTitle("Data: " + keys);
-                            dataStage.show();
-                        };
-                        node.setOnClick(handler);
-                        data.setNode(node);
-                        series.getData().add(data);
-                    }
+                    setUpChart(stats, totalStats);
                     series.setName("Daily Average Glucose Data");
                     meanLabel.setText(String.format("Mean: %.3f ", totalStats.getMean()));
                     stdLabel.setText(String.format("Std: %.3f ", totalStats.getStandardDeviation()));
@@ -143,6 +116,49 @@ public class DataTableController implements Initializable {
             }
         };
     }
+
+    /**
+     * Populate the main chart series
+     * @param stats map of dates and related general statistics
+     * @param totalStats descriptive stats for all the data
+     */
+    private void setUpChart(TreeMap<String, CGMStats> stats, DescriptiveStatistics totalStats) {
+        for (String keys : stats.keySet()) {
+            totalStats.addValue(stats.get(keys).getMean());
+            XYChart.Data<String, Number> data = new XYChart.Data<>(keys, stats.get(keys).getMean());
+            HoverNode node = new HoverNode(null, stats.get(keys));
+            EventHandler handler = event -> {
+                System.out.println("Creating a new graph for the hover node data");
+                final NumberAxis xAxis = new NumberAxis();
+                final NumberAxis yAxis = new NumberAxis();
+                xAxis.setLabel("Number of Updates");
+                //creating the chart
+                final LineChart<Number, Number> lineChart =
+                        new LineChart<>(xAxis, yAxis);
+                XYChart.Series<Number, Number> daySeries = new XYChart.Series<>();
+                XYChart.Series<Number, Number> dayMeanSeries = new XYChart.Series<>();
+                dayMeanSeries.setName("Day Mean");
+                daySeries.setName("Data for Day: " + keys);
+                int count = 0;
+                for (double dataPoint : stats.get(keys).getStatData()) {
+                    daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
+                    count++;
+                }
+                dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(keys).getMean()));
+                dayMeanSeries.getData().add(new XYChart.Data<>(count - 1, stats.get(keys).getMean()));
+                lineChart.getData().addAll(daySeries, dayMeanSeries);
+                Stage dataStage = new Stage();
+                Scene scene = new Scene(lineChart, 800, 800);
+                dataStage.setScene(scene);
+                dataStage.setTitle("Data: " + keys);
+                dataStage.show();
+            };
+            node.setOnClick(handler);
+            data.setNode(node);
+            series.getData().add(data);
+        }
+    }
+
 
     private double calcLow(TreeMap<String, CGMStats> stats) {
         double total = stats.values().size();
@@ -239,6 +255,10 @@ public class DataTableController implements Initializable {
 //        });
 //    }
 
+    /**
+     * Add data point to the table list
+     * @param data CGMData
+     */
     void addData(CGMData data) {
         tableList.add(data);
     }
