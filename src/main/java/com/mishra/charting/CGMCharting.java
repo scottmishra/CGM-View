@@ -47,9 +47,19 @@ public class CGMCharting extends Application {
             primaryStage.setOnCloseRequest(event -> driver.close());
             primaryStage.show();
 
-            DataTableController controller = loader.getController();
+            // Show the chart display
+            DataChartController controller = loader.getController();
             driver.getCgData().forEach(controller::addData);
             controller.createChart(driver.getCgData());
+
+            // Pop up the Date Selector
+            FXMLLoader popupLoader = new FXMLLoader(getClass().getResource("DateTimeSelection.fxml"));
+            Stage popupStage = new Stage();
+            Parent popupParent = popupLoader.load();
+            popupStage.setScene(new Scene(popupParent));
+            ((DateSelectionController)popupLoader.getController()).PassInDriver(driver);
+            popupStage.show();
+
         } catch (IOException e) {
             System.out.println("Couldn't find the DataTable.fxml");
             e.printStackTrace();

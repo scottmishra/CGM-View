@@ -30,7 +30,7 @@ import java.util.*;
  * Controller for loading and setting up the CGM chart
  * Created by Scott on 1/24/2016.
  */
-public class DataTableController implements Initializable {
+public class DataChartController implements Initializable {
 
     //    @FXML
 //    TableView<CGMData> gcmDataTableView;
@@ -53,6 +53,8 @@ public class DataTableController implements Initializable {
     private final CategoryAxis xAxis = new CategoryAxis();
     private final XYChart.Series<String, Number> series = new XYChart.Series<>();
     private final XYChart.Series<String, Number> meanSeries = new XYChart.Series<>();
+    private final XYChart.Series<String, Number> stdHighSeries = new XYChart.Series<>();
+    private final XYChart.Series<String, Number> stdLowSeries = new XYChart.Series<>();
     private LineChart<String, Number> lineChart;
 
     private final Label meanLabel = new Label();
@@ -67,6 +69,8 @@ public class DataTableController implements Initializable {
 //        setupColumns();
 //        splitPane.setDividerPosition(0,0);
         lineChart = new LineChart<>(xAxis, yAxis);
+        String chartCSS = getClass().getResource("chart.css").toExternalForm();
+        lineChart.getStylesheets().add(chartCSS);
     }
 
     void createChart(List<CGMData> dataList) {
@@ -111,7 +115,13 @@ public class DataTableController implements Initializable {
                     meanSeries.getData().add(new XYChart.Data<>(firstDate, totalStats.getMean()));
                     meanSeries.getData().add(new XYChart.Data<>(lastDate, totalStats.getMean()));
                     meanSeries.setName("Total Mean");
-                    lineChart.getData().addAll(series, meanSeries);
+                    stdHighSeries.getData().add(new XYChart.Data<>(firstDate,totalStats.getMean()+totalStats.getStandardDeviation()));
+                    stdHighSeries.getData().add(new XYChart.Data<>(lastDate,totalStats.getMean()+totalStats.getStandardDeviation()));
+                    stdLowSeries.getData().add(new XYChart.Data<>(firstDate,totalStats.getMean()-totalStats.getStandardDeviation()));
+                    stdLowSeries.getData().add(new XYChart.Data<>(lastDate,totalStats.getMean()-totalStats.getStandardDeviation()));
+                    stdHighSeries.setName("+1Std");
+                    stdLowSeries.setName("-1Std");
+                    lineChart.getData().addAll(series, meanSeries, stdHighSeries, stdLowSeries);
                     break;
             }
         };
@@ -127,36 +137,43 @@ public class DataTableController implements Initializable {
             totalStats.addValue(stats.get(keys).getMean());
             XYChart.Data<String, Number> data = new XYChart.Data<>(keys, stats.get(keys).getMean());
             HoverNode node = new HoverNode(null, stats.get(keys));
-            EventHandler handler = event -> {
-                System.out.println("Creating a new graph for the hover node data");
-                final NumberAxis xAxis = new NumberAxis();
-                final NumberAxis yAxis = new NumberAxis();
-                xAxis.setLabel("Number of Updates");
-                //creating the chart
-                final LineChart<Number, Number> lineChart =
-                        new LineChart<>(xAxis, yAxis);
-                XYChart.Series<Number, Number> daySeries = new XYChart.Series<>();
-                XYChart.Series<Number, Number> dayMeanSeries = new XYChart.Series<>();
-                dayMeanSeries.setName("Day Mean");
-                daySeries.setName("Data for Day: " + keys);
-                int count = 0;
-                for (double dataPoint : stats.get(keys).getStatData()) {
-                    daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
-                    count++;
-                }
-                dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(keys).getMean()));
-                dayMeanSeries.getData().add(new XYChart.Data<>(count - 1, stats.get(keys).getMean()));
-                lineChart.getData().addAll(daySeries, dayMeanSeries);
-                Stage dataStage = new Stage();
-                Scene scene = new Scene(lineChart, 800, 800);
-                dataStage.setScene(scene);
-                dataStage.setTitle("Data: " + keys);
-                dataStage.show();
-            };
+            EventHandler handler = event -> extractDayGraph(stats, keys);
             node.setOnClick(handler);
             data.setNode(node);
             series.getData().add(data);
         }
+    }
+
+    /**
+     * Create a plot based on the current day key string passed in
+     * @param stats tree map of all stats based on days
+     * @param dateString date string
+     */
+    private void extractDayGraph(TreeMap<String, CGMStats> stats, String dateString) {
+        System.out.println("Creating a new graph for the hover node data");
+        final NumberAxis xAxis = new NumberAxis();
+        final NumberAxis yAxis = new NumberAxis();
+        xAxis.setLabel("Number of Updates");
+        //creating the chart
+        final LineChart<Number, Number> lineChart =
+                new LineChart<>(xAxis, yAxis);
+        XYChart.Series<Number, Number> daySeries = new XYChart.Series<>();
+        XYChart.Series<Number, Number> dayMeanSeries = new XYChart.Series<>();
+        dayMeanSeries.setName("Day Mean");
+        daySeries.setName("Data for Day: " + dateString);
+        int count = 0;
+        for (double dataPoint : stats.get(dateString).getStatData()) {
+            daySeries.getData().add(new XYChart.Data<>(count, dataPoint));
+            count++;
+        }
+        dayMeanSeries.getData().add(new XYChart.Data<>(0, stats.get(dateString).getMean()));
+        dayMeanSeries.getData().add(new XYChart.Data<>(count - 1, stats.get(dateString).getMean()));
+        lineChart.getData().addAll(daySeries, dayMeanSeries);
+        Stage dataStage = new Stage();
+        Scene scene = new Scene(lineChart, 800, 800);
+        dataStage.setScene(scene);
+        dataStage.setTitle("Data: " + dateString);
+        dataStage.show();
     }
 
 
